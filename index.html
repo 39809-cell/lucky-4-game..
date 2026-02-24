@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>LUCKY 4 - RUTHLESS</title>
+    <style>
+        :root { --gold: #d4af37; --dark-green: #1b5e20; --light-green: #2ecc71; --red: #e74c3c; }
+        body { font-family: 'Arial Black', sans-serif; background: radial-gradient(circle, #2ecc71, #1b5e20); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: #fffce0; border: 6px solid var(--gold); border-radius: 25px; width: 340px; padding: 20px; text-align: center; box-shadow: 0 15px 50px rgba(0,0,0,0.6); }
+        h1 { color: var(--dark-green); margin: 0; font-size: 32px; text-shadow: 2px 2px 0px white; }
+        .grid-container { display: grid; grid-template-columns: repeat(4, 75px); grid-template-rows: repeat(4, 75px); gap: 10px; justify-content: center; margin: 20px 0; }
+        .quadrado { width: 75px; height: 75px; background: linear-gradient(145deg, #bdc3c7, #95a5a6); border: 3px solid #7f8c8d; border-radius: 12px; font-size: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 #555; transition: 0.1s; }
+        .pending { background: #f1c40f !important; transform: scale(0.95); box-shadow: none !important; }
+        .revelado-certo { background: var(--light-green) !important; color: white; border-color: var(--dark-green) !important; box-shadow: none !important; }
+        .revelado-errado { background: #333 !important; color: #555; border-color: #000 !important; box-shadow: none !important; }
+        .status-msg { font-size: 22px; font-weight: 900; color: var(--dark-green); margin: 15px 0; min-height: 35px; text-transform: uppercase; }
+        .btn-reset { background: #b22222; color: white; border: none; padding: 15px; border-radius: 50px; width: 100%; font-size: 20px; font-weight: bold; margin-top: 20px; cursor: pointer; box-shadow: 0 5px 0 #7b1717; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🍀 LUCKY 4</h1>
+    <div style="font-weight: bold; color: #444;">APOSTA: 3,00€</div>
+    <div class="grid-container" id="mainGrid"></div>
+    <div class="status-msg" id="mensagem">RASPA 4!</div>
+    <button class="btn-reset" onclick="window.location.reload()">NOVA RASPADA</button>
+</div>
+
+<script>
+    let certos = [];
+    let cliques = 0;
+    let acertos = 0;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playNote(freq, type, start, duration, vol=0.1, slideTo=null) {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
+        if (slideTo) {
+            o.frequency.exponentialRampToValueAtTime(slideTo, audioCtx.currentTime + start + duration);
+        }
+        g.gain.setValueAtTime(vol, audioCtx.currentTime + start);
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + start + duration);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(audioCtx.currentTime + start);
+        o.stop(audioCtx.currentTime + start + duration);
+    }
+
+    const grid = document.getElementById('mainGrid');
+    for(let i=0; i<16; i++) {
+        let q = document.createElement('div');
+        q.className = 'quadrado'; q.id = 'q' + i; q.innerText = '🍀';
+        q.onclick = () => prepararRaspa(i);
+        grid.appendChild(q);
+    }
+
+    while(certos.length < 4) {
+        let r = Math.floor(Math.random() * 16);
+        if(!certos.includes(r)) certos.push(r);
+    }
+
+    function prepararRaspa(i) {
+        if(cliques >= 4) return;
+        let el = document.getElementById('q' + i);
+        if(el.classList.contains('revelado-certo') || el.classList.contains('revelado-errado') || el.classList.contains('pending')) return;
+        el.classList.add('pending');
+        setTimeout(() => { raspar(i, el); }, 250);
+    }
+
+    function raspar(i, el) {
+        el.classList.remove('pending');
+        cliques++;
+        if(certos.includes(i)) {
+            acertos++;
+            el.innerText = '💰'; el.classList.add('revelado-certo');
+            const scale = [523.25, 659.25, 783.99, 1046.50];
+            playNote(scale[acertos-1], 'sine', 0, 0.4, 0.2);
+        } else {
+            el.innerText = '❌'; el.classList.add('revelado-errado');
+            // NOVO SOM DE FALHA: Buzz dissonante e negativo
+            playNote(180, 'sawtooth', 0, 0.3, 0.15, 60); 
+        }
+        if(cliques === 4) setTimeout(finalizar, 500);
+    }
+
+    function finalizar() {
+        const m = document.getElementById('mensagem');
+        if(acertos === 0) {
+            m.innerText = "AZAR TOTAL!"; m.style.color = "#000";
+            // MÚSICA TRISTE AGRESSIVA: Notas dissonantes e pesadas
+            playNote(110, 'sawtooth', 0, 1.0, 0.2, 40);
+            playNote(115, 'sawtooth', 0.2, 1.0, 0.2, 35);
+            playNote(90, 'sawtooth', 0.6, 1.2, 0.3, 30);
+        } else if(acertos === 1) {
+            m.innerText = "SÓ 1€... MAIS UMA?";
+            // POSITIVA LIGEIRA: Melodia ascendente curta
+            [440, 554, 659].forEach((f, i) => playNote(f, 'sine', i*0.1, 0.3));
+        } else if(acertos === 2) {
+            m.innerText = "6€! ESTÁS NO LUCRO";
+            [523, 659, 783, 1046].forEach((f, i) => playNote(f, 'sine', i*0.08, 0.4));
+        } else if(acertos === 3) {
+            m.innerText = "36€! QUE SORTE!";
+            const melody = [523, 659, 783, 1046, 783, 1046, 1318];
+            melody.forEach((f, i) => playNote(f, 'triangle', i*0.1, 0.4, 0.1));
+        } else if(acertos === 4) {
+            m.innerText = "JACKPOT 216€!";
+            const notes = [523, 659, 783, 1046, 1318, 1567, 2093];
+            notes.forEach((f, i) => playNote(f, 'square', i*0.06, 0.6, 0.03));
+        }
+    }
+</script>
+</body>
+</html>
